@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shroomtop420™ Repo Pages Manager (Secure Edition)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Content Security Policy: block all external scripts/styles/images/fonts -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src https://api.github.com; img-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self';">
+  <meta name="referrer" content="no-referrer">
+  <style>
+    /* ====== Inlined Glassmorphic Tailwind-Lite ====== */
+    html, body { min-height: 100%; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg,#170933 0%,#231744 100%);}
+    .container { max-width: 740px; margin: 3.5rem auto; padding: 2rem; background: rgba(23,18,40,0.88); border-radius: 2rem; box-shadow: 0 8px 32px 0 #221a3655; }
+    .header { text-align: center; margin-bottom: 1.7rem;}
+    .title { font-size: 2.2rem; font-weight: 800; color: #5eead4; letter-spacing: -1.5px; text-shadow: 0 2px 12px #11a9e980;}
+    .desc { color: #d1d5db; margin-top: .4rem; font-size: 1.1rem;}
+    label { color: #a5f3fc; font-weight: 600; display:block; margin-top: 1.1em;}
+    input, button, textarea { font-family: inherit; border-radius: 0.7rem; border: none; outline: none; padding: 0.7em 1em;}
+    input[type="text"], input[type="password"] { width: 100%; background: #130a2b; color: #e0f2fe; margin-top: .4em; border: 2px solid #0369a1;}
+    input[type="text"]:focus, input[type="password"]:focus { border:2px solid #06b6d4;}
+    .button { font-weight:700; cursor:pointer; margin-top:.8em; background: #06b6d4; color:#fff; box-shadow:0 2px 8px #0284c740;}
+    .button:hover { background: #0e7490;}
+    .danger { background: #991b1b; color: #fff; }
+    .success { background: #059669; color: #fff; }
+    .btn-row { display:flex; gap:1.2em; align-items:center;}
+    .repo-list { max-height: 390px; overflow-y: auto; margin-top:1.3em; }
+    .repo-card { background: #18181b99; border: 1.7px solid #134e4a33; border-radius: 1.2em; margin-bottom: 1.1em; padding: 1.2em; display:flex; flex-wrap:wrap; gap:1.1em;}
+    .repo-name { font-size:1.1em; font-weight:700; color:#5eead4; margin-bottom:0.2em;}
+    .repo-meta { color:#7dd3fc; font-size:.93em;}
+    .repo-fields input, .repo-fields textarea { margin: .22em 0 .28em 0; background:#111827; color:#bae6fd;}
+    .repo-fields textarea { width:100%; min-height: 34px; resize:vertical;}
+    .pages-on { color:#4ade80; font-weight:700;}
+    .pages-off { color:#f87171; font-weight:700;}
+    .status { margin-top: .5em; font-size: .98em;}
+    .mono { font-family: 'JetBrains Mono', 'Fira Mono', 'Consolas', monospace; }
+    .searchbox { width: 64%; background: #18181b; color: #a5f3fc; border:1.5px solid #06b6d4;}
+    .csv-btn { background:#5eead4;color:#083344;}
+    .csv-btn:hover {background:#2dd4bf;}
+    @media(max-width:650px){ .container {padding:1rem;} .searchbox {width:100%;}}
+    .preview-box {border:2px solid #eab308; border-radius:1.3em; padding:1.2em; background:#18181b; color:#fde68a; margin:1.1em 0;}
+    .footer {margin-top:2em; color:#a1a1aa;text-align:center;opacity:.83;font-size:.98em;}
+    .disabled {opacity:.45; pointer-events:none;}
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="title">Shroomtop420™ Repo Pages Manager</div>
+    <div class="desc">Bulk-manage <b>GitHub Pages</b> homepages for all your repos. <span class="mono">[Secure Edition]</span><br>
+      <span style="color:#fbbf24">100% local, session-only, zero tracking. All data wiped on close/refresh.</span>
+    </div>
+  </div>
+  <form id="login-form" autocomplete="off">
+    <label for="username">GitHub Username</label>
+    <input id="username" type="text" autocomplete="off" required pattern="^[a-zA-Z0-9-]+$" maxlength="39" autofocus>
+
+    <label for="pat">GitHub Personal Access Token (PAT)
+      <span style="font-weight:400;color:#fbbf24;font-size:.95em;">
+        [<a href="https://github.com/settings/tokens" style="color:#38bdf8" target="_blank" rel="noopener">Create PAT</a>]
+      </span>
+    </label>
+    <input id="pat" type="password" required maxlength="100" autocomplete="off">
+    <button class="button" type="submit">Login & Fetch Repos</button>
+  </form>
+  <div id="manager" style="display:none;">
+    <div class="btn-row" style="margin-bottom:1em;">
+      <input id="search" class="searchbox mono" placeholder="Filter repos by name...">
+      <button id="refresh" class="button" style="margin-top:0;">↻ Refresh</button>
+      <button id="bulk-preview" class="button danger" style="margin-top:0;">Bulk Update (Preview)</button>
+      <button id="export" class="button csv-btn" style="margin-top:0;">Export CSV</button>
+      <button id="logout" class="button" style="margin-top:0;background:#f43f5e;color:#fff;">Logout</button>
+    </div>
+    <div id="repo-list" class="repo-list"></div>
+    <div id="preview-modal" style="display:none;">
+      <div class="preview-box mono">
+        <b>Bulk Update Preview</b>
+        <div id="preview-changes"></div>
+        <button id="confirm-bulk" class="button success" style="margin-top:.7em;">Confirm Bulk Update</button>
+        <button id="cancel-bulk" class="button danger" style="margin-top:.7em;">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div id="status" class="status"></div>
+</div>
+<div class="footer">
+  ⚡ <a href="https://www.shroomtop420.com/" style="color:#5eead4;text-decoration:underline;" target="_blank" rel="noopener">Shroomtop420.com</a> | Secure Edition v1.0
+</div>
+<script>
+  // ========== CSP Compliance: No eval, no dynamic import, no remote calls except GitHub API ==========
+  // ========== All state/session data is kept in JS memory only; nothing is stored in IndexedDB, localStorage, or cookies ==========
+
+  // ========== XSS/Injection Mitigation ==========
+  function sanitize(str) {
+    if (!str) return '';
+    return str.replace(/[<>"'&]/g, c => (
+      { '<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;' }[c]
+    ));
+  }
+
+  // ========== State ==========
+  let username = '', token = '', repos = [], filteredRepos = [];
+  let pagesCache = {};
+  let inBulkPreview = false;
+
+  // ========== GitHub API ==========
+  async function ghFetch(path, method="GET", body=null) {
+    const headers = { "Authorization": "token " + token, "Accept": "application/vnd.github.v3+json" };
+    let opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+    let url = path.startsWith("http") ? path : `https://api.github.com${path}`;
+    let res = await fetch(url, opts);
+    if (!res.ok) {
+      // GitHub API errors: handle rate limits, bad PAT, quota, etc.
+      if(res.status===401) throw new Error("Unauthorized: Invalid GitHub token or expired PAT.");
+      if(res.status===403) throw new Error("Forbidden or API rate limit hit. Wait or check PAT scopes.");
+      throw new Error(`[${res.status}] ${res.statusText}`);
+    }
+    return await res.json();
+  }
+
+  async function getRepos() {
+    let result = [], page = 1, perPage = 100, done = false;
+    while (!done) {
+      const batch = await ghFetch(`/user/repos?per_page=${perPage}&page=${page}`);
+      result = result.concat(batch);
+      done = batch.length < perPage;
+      page++;
+    }
+    return result.filter(r => !r.fork);
+  }
+
+  async function getPagesStatus(repo) {
+    try {
+      const r = await ghFetch(`/repos/${username}/${repo.name}/pages`);
+      return (r && r.html_url) ? r.html_url : null;
+    } catch { return null; }
+  }
+
+  async function updateRepo(repo, data) {
+    // PATCH to update repo homepage, description, topics (array)
+    return ghFetch(`/repos/${username}/${repo.name}`, "PATCH", data);
+  }
+
+  // ========== UI ==========
+  const el = id => document.getElementById(id);
+  function setStatus(msg, type = "") {
+    el("status").textContent = msg;
+    el("status").style.color = type === "err" ? "#f87171" : (type === "ok" ? "#4ade80" : "#eab308");
+  }
+
+  function repoCardHTML(repo, i) {
+    // All fields sanitized for DOM and also for value assignment
+    return `
+      <div style="flex:1;min-width:155px;">
+        <div class="repo-name mono">${sanitize(repo.name)}</div>
+        <div class="repo-meta">${sanitize(repo.description || "")}</div>
+        <div class="repo-meta" style="margin-top:.18em;">${repo.private ? 'Private' : 'Public'} | Branch: ${sanitize(repo.default_branch)}</div>
+      </div>
+      <div class="repo-fields" style="flex:2;min-width:180px;">
+        <input type="text" value="${sanitize(repo.homepage||"")}" data-homepage="${i}" maxlength="120" autocomplete="off" placeholder="Homepage URL (https://)">
+        <textarea data-desc="${i}" maxlength="140" autocomplete="off" placeholder="Description">${sanitize(repo.description||"")}</textarea>
+        <input type="text" value="${sanitize((repo.topics||[]).join(','))}" data-topics="${i}" maxlength="180" autocomplete="off" placeholder="Topics (comma separated)">
+        <div style="margin:.3em 0;">
+          <button class="button success" data-update="${i}">Update</button>
+          <a class="button" style="background:#c026d3;color:#fff;font-size:.93em;padding:.52em 1.1em;" target="_blank" href="https://${username}.github.io/${sanitize(repo.name)}/"${repo.pages_url?'':' tabindex="-1" style="opacity:.5;pointer-events:none;"'}>View Pages</a>
+          <span class="${repo.pages_url?'pages-on':'pages-off'} mono" style="margin-left:.6em;">${repo.pages_url?'Pages Enabled':'No Pages'}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRepos() {
+    let q = el("search").value.trim().toLowerCase();
+    filteredRepos = repos.filter(r => !q || r.name.toLowerCase().includes(q));
+    let html = '';
+    filteredRepos.forEach((repo, i) => {
+      html += `<div class="repo-card" id="repo-${i}">${repoCardHTML(repo, i)}</div>`;
+    });
+    el("repo-list").innerHTML = html || '<div style="color:#7dd3fc;padding:1.6em;text-align:center;">No repositories found.</div>';
+    // Wire up update buttons
+    filteredRepos.forEach((repo, i) => {
+      el("repo-list").querySelector(`[data-update="${i}"]`).onclick = async () => {
+        let homepage = el("repo-list").querySelector(`[data-homepage="${i}"]`).value.trim();
+        let description = el("repo-list").querySelector(`[data-desc="${i}"]`).value.trim();
+        let topics = el("repo-list").querySelector(`[data-topics="${i}"]`).value.split(',').map(x=>x.trim()).filter(Boolean);
+        homepage = sanitize(homepage);
+        description = sanitize(description);
+        topics = topics.map(t=>sanitize(t));
+        el("repo-list").querySelector(`[data-update="${i}"]`).textContent="Updating...";
+        try {
+          await updateRepo(repo, {homepage, description, topics});
+          repo.homepage = homepage; repo.description = description; repo.topics = topics;
+          setStatus("Updated "+repo.name, "ok");
+          el("repo-list").querySelector(`[data-update="${i}"]`).textContent="✓";
+          setTimeout(()=>el("repo-list").querySelector(`[data-update=\"${i}\"]`).textContent="Update", 1500);
+        } catch (e) {
+          setStatus("Update failed: " + e, "err");
+          el("repo-list").querySelector(`[data-update=\"${i}\"]`).textContent="Error";
+        }
+      };
+    });
+  }
+
+  // ========== Bulk Update with Preview ==========
+  el("bulk-preview").onclick = () => {
+    let changes = [];
+    filteredRepos.forEach((repo, i) => {
+      // Only propose changes if homepage doesn't match expected Pages URL and repo has Pages enabled
+      if (repo.pages_url) {
+        let expectedUrl = `https://${username}.github.io/${repo.name}/`;
+        if (repo.homepage !== expectedUrl) {
+          changes.push({repo, index: i, old: repo.homepage || "", new: expectedUrl});
+        }
+      }
+    });
+    if (!changes.length) {
+      setStatus("No changes to bulk update.", "ok");
+      return;
+    }
+    inBulkPreview = true;
+    el("preview-modal").style.display = "block";
+    el("preview-changes").innerHTML = changes.map(c =>
+      `<div><b>${sanitize(c.repo.name)}</b>:<br>
+      <span style="color:#fbbf24;">${sanitize(c.old)}</span> &rarr; <span style="color:#22d3ee;">${sanitize(c.new)}</span></div><hr style="border:none;border-bottom:1px dashed #27272a;">`
+    ).join('');
+    // Confirm/cancel handlers
+    el("confirm-bulk").onclick = async () => {
+      for (let c of changes) {
+        try {
+          await updateRepo(c.repo, {homepage: c.new});
+          c.repo.homepage = c.new;
+        } catch (e) {
+          setStatus("Bulk update error: "+e, "err");
+        }
+      }
+      setStatus("Bulk update complete!", "ok");
+      el("preview-modal").style.display = "none";
+      inBulkPreview = false;
+      renderRepos();
+    };
+    el("cancel-bulk").onclick = () => {
+      el("preview-modal").style.display = "none";
+      inBulkPreview = false;
+      setStatus("Bulk update cancelled.", "err");
+    };
+  };
+
+  // ========== CSV Export ==========
+  el("export").onclick = () => {
+    let csv = "Repo,Pages URL,Homepage,Description\n";
+    repos.filter(r => r.pages_url).forEach(r => {
+      let purl = r.pages_url || "";
+      let hp = r.homepage || "";
+      let desc = (r.description || "").replace(/"/g, '""');
+      csv += `"${r.name}","${purl}","${hp}","${desc}"\n`;
+    });
+    const blob = new Blob([csv], {type: "text/csv"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = "repo-pages-urls.csv";
+    document.body.appendChild(a);
+    a.click(); setTimeout(() => {document.body.removeChild(a); URL.revokeObjectURL(url);}, 100);
+  };
+
+  // ========== Auth Flow ==========
+  el("login-form").onsubmit = async (e) => {
+    e.preventDefault();
+    setStatus("Connecting to GitHub…");
+    username = el("username").value.trim();
+    token = el("pat").value.trim();
+    if (!username.match(/^[a-zA-Z0-9-]+$/) || !token) {
+      setStatus("Invalid username or token.", "err");
+      return;
+    }
+    try {
+      repos = await getRepos();
+      // Detect Pages for each repo
+      setStatus("Detecting Pages sites…");
+      await Promise.all(repos.map(async repo => {
+        repo.pages_url = await getPagesStatus(repo);
+      }));
+      setStatus("Loaded " + repos.length + " repos.", "ok");
+      el("login-form").style.display = "none";
+      el("manager").style.display = "block";
+      renderRepos();
+    } catch (err) {
+      setStatus(err.message || "Failed to fetch repos.", "err");
+    }
+  };
+
+  el("logout").onclick = () => {
+    // Wipe all session data
+    username = token = ""; repos = [];
+    el("manager").style.display = "none";
+    el("login-form").style.display = "block";
+    el("status").textContent = "Logged out.";
+    el("username").value = el("pat").value = "";
+    el("repo-list").innerHTML = "";
+  };
+
+  el("refresh").onclick = async () => {
+    if (!username || !token) return;
+    setStatus("Refreshing repo list…");
+    try {
+      repos = await getRepos();
+      setStatus("Detecting Pages sites…");
+      await Promise.all(repos.map(async repo => {
+        repo.pages_url = await getPagesStatus(repo);
+      }));
+      setStatus("Repo list refreshed.", "ok");
+      renderRepos();
+    } catch (err) {
+      setStatus("Refresh error: " + (err.message || err), "err");
+    }
+  };
+
+  el("search").oninput = () => { if (!inBulkPreview) renderRepos(); };
+
+  // Wipe session data on page unload
+  window.onbeforeunload = () => {
+    username = token = ""; repos = [];
+  };
+</script>
+</body>
+</html>
